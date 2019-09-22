@@ -146,7 +146,9 @@ Pointer<T, size>::~Pointer(){
     // Lab: New and Delete Project Lab
     typename std::list<PtrDetails<T> >::iterator it = findPtrInfo(addr);
     it->refcount--;
-    collect();
+    if(it->refcount == 0) {
+        collect();
+    }
 }
 
 // Collect garbage. Returns true if at least
@@ -161,22 +163,27 @@ bool Pointer<T, size>::collect(){
     bool memFree = false;
     typename std::list<PtrDetails<T> >::iterator it = refContainer.begin();
 
-    while (it != refContainer.end()) {
-        if (it->refcount > 0) {
-            it++;
-        }
-        else {
-            if (it->isArray) {
-            delete[] it->memPtr;
-            }
-            else {
-                delete it->memPtr;
+    do {
+        for (it = refContainer.begin(); it != refContainer.end(); it++) {
+            if (it->refcount > 0) {
+                continue;
             }
 
-            it = refContainer.erase(it);
             memFree = true;
+            refContainer.remove(*it);
+
+            if (it->memPtr){
+                if (it->isArray){
+                    delete[] it->memPtr; // delete array
+                }
+                else{
+                    delete it->memPtr; // delete single element
+                }
+            }
+            break;
         }
-    }
+    } while (it != refContainer.end());
+
     return memFree;
 }
 
@@ -213,19 +220,19 @@ T *Pointer<T, size>::operator=(T *t){
 template <class T, int size>
 Pointer<T, size> &Pointer<T, size>::operator=(Pointer &rv){
 
-    // TODO: Implement operator==
+    // DONE: Implement operator==
     // LAB: Smart Pointer Project Lab
-    
     typename std::list<PtrDetails<T> >::iterator it = findPtrInfo(addr);
     it->refcount--;
 
-    PtrDetails<T> ptr_details(rv.addr, rv.arraySize);
+    it = findPtrInfo(rv.addr);
     it->refcount++;
 
-    addr = it->memPtr;
-    isArray = it->isArray;
-    arraySize = it->arraySize;
+    this->addr = rv.addr;
+    this->isArray = rv.isArray;
+    this->arraySize = rv.arraySize;
     return *this;
+
 }
 
 // A utility function that displays refContainer.
